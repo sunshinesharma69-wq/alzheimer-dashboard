@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="report-header section-card">
+  <span class="eyebrow">Full report</span>
+  <h1>{{ project.title }}</h1>
+  <p class="lead">{{ project.subtitle }}</p>
+  <p>The dashboard is built from the real notebook outputs generated on the GSE5281 expression matrix and the DGIdb interaction table.</p>
+  <div class="hero-actions">
+    <a class="button button-primary" href="/download-report">Download full report</a>
+    <a class="button button-secondary" href="/">Back to dashboard</a>
+  </div>
+</section>
+
+<section class="section-card">
+  <div class="section-heading">
+    <div>
+      <span class="section-kicker">Dataset</span>
+      <h2>Input sources and scale</h2>
+    </div>
+  </div>
+  <div class="report-grid">
+    <div>
+      <h3>What was used</h3>
+      <ul class="plain-list">
+        <li>GSE5281 series matrix for AD versus control expression profiles.</li>
+        <li>DGIdb interaction file for drug-gene repurposing evidence.</li>
+        <li>Notebook outputs for model comparison and prioritized candidates.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Core numbers</h3>
+      <ul class="plain-list">
+        <li>Total samples: {{ project.sample_stats[0].value }}</li>
+        <li>Control: {{ project.sample_stats[1].value }}</li>
+        <li>AD: {{ project.sample_stats[2].value }}</li>
+        <li>Mapped expression features: {{ project.sample_stats[3].value }}</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="section-card">
+  <div class="section-heading">
+    <div>
+      <span class="section-kicker">Heatmap</span>
+      <h2>Expression heatmap</h2>
+    </div>
+  </div>
+  <img class="heatmap-image" src="{{ url_for('static', filename=project.heatmap_image) }}" alt="Heatmap of top variable expression features" />
+  <p class="mini-note">This figure is generated from the real GSE5281 expression matrix and helps visualize the dataset structure used in the notebook.</p>
+</section>
+
+<section class="section-card">
+  <div class="section-heading">
+    <div>
+      <span class="section-kicker">Validation</span>
+      <h2>External validation results</h2>
+    </div>
+  </div>
+  <div class="validation-metrics">
+    <div class="metric-pill accent-pill">
+      <span>External accuracy</span>
+      <strong>{{ '%.2f'|format(project.validation.accuracy) }}</strong>
+    </div>
+    <div class="metric-pill">
+      <span>External AUC-ROC</span>
+      <strong>{{ '%.4f'|format(project.validation.external_auc) }}</strong>
+    </div>
+    <div class="metric-pill">
+      <span>Interpretation</span>
+      <strong>{{ project.validation.interpretation }}</strong>
+    </div>
+  </div>
+  <div class="callout-box">
+    <p><strong>Confusion matrix:</strong> TP {{ project.validation.confusion_matrix[0][0] }}, FP {{ project.validation.confusion_matrix[0][1] }}, FN {{ project.validation.confusion_matrix[1][0] }}, TN {{ project.validation.confusion_matrix[1][1] }}</p>
+  </div>
+  <div class="table-wrap compact" style="margin-top: 14px;">
+    <table>
+      <thead>
+        <tr>
+          <th>Class</th>
+          <th>Precision</th>
+          <th>Recall</th>
+          <th>F1</th>
+          <th>Support</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in project.validation.classification_summary %}
+        <tr>
+          <td>{{ item.label }}</td>
+          <td>{{ '%.2f'|format(item.precision) }}</td>
+          <td>{{ '%.2f'|format(item.recall) }}</td>
+          <td>{{ '%.2f'|format(item.f1) }}</td>
+          <td>{{ item.support }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="section-card">
+  <div class="section-heading">
+    <div>
+      <span class="section-kicker">Modeling</span>
+      <h2>Cross-validation results</h2>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>Accuracy</th>
+          <th>ROC-AUC</th>
+          <th>F1</th>
+          <th>Interpretation</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in project.model_results %}
+        <tr class="{% if row.name == best_model.name %}highlight{% endif %}">
+          <td>{{ row.name }}</td>
+          <td>{{ '%.4f'|format(row.accuracy) }}</td>
+          <td>{{ '%.4f'|format(row.roc_auc) }}</td>
+          <td>{{ '%.4f'|format(row.f1) }}</td>
+          <td>{{ row.note }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div id="modelComparisonChart"
+       class="model-chart-shell"
+       data-labels='{{ model_chart.labels|tojson }}'
+       data-accuracy='{{ model_chart.accuracy|tojson }}'
+       data-roc='{{ model_chart.roc_auc|tojson }}'
+       data-f1='{{ model_chart.f1|tojson }}'
+       data-y-max='{{ model_chart.y_max }}'></div>
+  <div class="chart-legend" aria-label="Metric legend">
+    <div class="legend-item"><span class="legend-swatch legend-accuracy"></span>Accuracy</div>
+    <div class="legend-item"><span class="legend-swatch legend-roc"></span>ROC-AUC</div>
+    <div class="legend-item"><span class="legend-swatch legend-f1"></span>F1</div>
+  </div>
+  <p class="callout">Best model by ROC-AUC: <strong>{{ best_model.name }}</strong> with {{ '%.4f'|format(best_model.roc_auc) }}.</p>
+</section>
+
+<section class="two-col">
+  <article class="section-card">
+    <div class="section-heading">
+      <div>
+        <span class="section-kicker">Genes</span>
+        <h2>Top feature genes</h2>
+      </div>
+    </div>
+    <div class="table-wrap compact">
+      <table>
+        <thead>
+          <tr>
+            <th>Gene</th>
+            <th>Importance</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for gene in project.top_genes %}
+          <tr>
+            <td>{{ gene.gene }}</td>
+            <td>{{ '%.6f'|format(gene.importance) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="section-card">
+    <div class="section-heading">
+      <div>
+        <span class="section-kicker">Drug evidence</span>
+        <h2>Top DGIdb interaction counts</h2>
+      </div>
+    </div>
+    <div class="table-wrap compact">
+      <table>
+        <thead>
+          <tr>
+            <th>Drug</th>
+            <th>Hits</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for drug in project.drug_hits %}
+          <tr>
+            <td>{{ drug.drug }}</td>
+            <td>{{ drug.count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+
+<section class="section-card accent-card">
+  <div class="section-heading">
+    <div>
+      <span class="section-kicker">Priority list</span>
+      <h2>Final candidate interpretation from the notebook</h2>
+    </div>
+  </div>
+  <div class="candidate-list report-candidates">
+    {% for drug in project.final_candidates %}
+    <div class="candidate-item">
+      <div class="candidate-title">{{ drug.drug }} <span>{{ drug.priority }}</span></div>
+      <p><strong>BBB:</strong> {{ drug.bbb }}</p>
+      <p><strong>Mechanism:</strong> {{ drug.mechanism }}</p>
+      <p><strong>AD link:</strong> {{ drug.ad_link }}</p>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="callout">The notebook conclusion prioritizes Alprazolam and Patupilone as the strongest brain-penetrant candidates.</p>
+</section>
+
+<section class="section-card">
+  <div class="section-heading">
+    <div>
+      <span class="section-kicker">Step-by-step</span>
+      <h2>How to proceed as a beginner</h2>
+    </div>
+  </div>
+  <ol class="step-list">
+    <li>Keep the real datasets in the project data folder.</li>
+    <li>Run <strong>python app.py</strong> after installing Flask.</li>
+    <li>Open the home page first, then the full report page.</li>
+    <li>Replace or extend the static result blocks only after you finish any new experiments.</li>
+  </ol>
+</section>
+{% endblock %}

@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="hero-card hero-split">
+  <div class="hero-copy">
+    <span class="eyebrow">AI-based drug repurposing for Alzheimer disease</span>
+    <h1>Clinical discovery workspace for Alzheimer gene and drug repurposing</h1>
+    <p class="lead">{{ project.intro }}</p>
+    <div class="hero-actions">
+      <a class="button button-primary" href="/download-report">Download full report</a>
+      <a class="button button-secondary" href="/report">Open report page</a>
+    </div>
+  </div>
+  <div class="hero-panel">
+    <div class="panel-label">Best model</div>
+    <div class="panel-model">{{ best_model.name }}</div>
+    <div class="panel-metrics">
+      <div><strong>{{ '%.4f'|format(best_model.accuracy) }}</strong><span>Accuracy</span></div>
+      <div><strong>{{ '%.4f'|format(best_model.roc_auc) }}</strong><span>ROC-AUC</span></div>
+      <div><strong>{{ '%.4f'|format(best_model.f1) }}</strong><span>F1 score</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="section-card">
+  <div class="tab-switcher" role="tablist" aria-label="Dashboard tabs">
+    <button class="active" type="button" data-tab-target="overview">Overview</button>
+    <button type="button" data-tab-target="models">Models</button>
+    <button type="button" data-tab-target="drugs">Drug insights</button>
+    <button type="button" data-tab-target="genes">Gene explorer</button>
+    <button type="button" data-tab-target="report">Report</button>
+  </div>
+
+  <div class="tab-panel active" id="overview">
+    <div class="section-heading">
+      <div>
+        <span class="section-kicker">Clinical overview</span>
+        <h2>Patient-friendly summary of the Alzheimer repurposing study</h2>
+      </div>
+    </div>
+    <section class="stat-grid compact-stats">
+      {% for stat in project.sample_stats %}
+      <article class="stat-card">
+        <span>{{ stat.label }}</span>
+        <strong>{{ stat.value }}</strong>
+      </article>
+      {% endfor %}
+    </section>
+    <div class="two-col">
+      <section class="section-card nested-card">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Study flow</span>
+            <h2>How the pipeline works</h2>
+          </div>
+        </div>
+        <ol class="step-list">
+          {% for step in project.pipeline %}
+          <li>{{ step }}</li>
+          {% endfor %}
+        </ol>
+      </section>
+      <section class="section-card nested-card accent-card">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Validation</span>
+            <h2>Internal and external validation</h2>
+          </div>
+        </div>
+        <div class="validation-metrics">
+          <div class="metric-pill accent-pill">
+            <span>Internal CV accuracy</span>
+            <strong>{{ '%.2f'|format(project.model_results[1].accuracy) }}</strong>
+          </div>
+          <div class="metric-pill">
+            <span>External accuracy</span>
+            <strong>{{ '%.2f'|format(project.validation.accuracy) }}</strong>
+          </div>
+          <div class="metric-pill">
+            <span>External AUC-ROC</span>
+            <strong>{{ '%.4f'|format(project.validation.external_auc) }}</strong>
+          </div>
+        </div>
+        <div class="callout-box">
+          <p><strong>Interpretation:</strong> {{ project.validation.interpretation }}</p>
+          <p><strong>Confusion matrix:</strong> TP {{ project.validation.confusion_matrix[0][0] }}, FP {{ project.validation.confusion_matrix[0][1] }}, FN {{ project.validation.confusion_matrix[1][0] }}, TN {{ project.validation.confusion_matrix[1][1] }}</p>
+        </div>
+        <div class="table-wrap compact" style="margin-top: 14px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>Precision</th>
+                <th>Recall</th>
+                <th>F1</th>
+                <th>Support</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in project.validation.classification_summary %}
+              <tr>
+                <td>{{ item.label }}</td>
+                <td>{{ '%.2f'|format(item.precision) }}</td>
+                <td>{{ '%.2f'|format(item.recall) }}</td>
+                <td>{{ '%.2f'|format(item.f1) }}</td>
+                <td>{{ item.support }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="section-card nested-card accent-card">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Highlights</span>
+            <h2>What the notebook already points to</h2>
+          </div>
+        </div>
+        <div class="callout-box">
+          <p><strong>Best classifier:</strong> SVM with the strongest ROC-AUC in the notebook.</p>
+          <p><strong>Repurposing outcome:</strong> Alprazolam and Patupilone stand out as the most relevant brain-penetrant candidates.</p>
+          <p><strong>Data sources:</strong> GSE5281 expression matrix and the DGIdb interaction table.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="models">
+    <div class="section-heading">
+      <div>
+        <span class="section-kicker">ML comparison</span>
+        <h2>Model comparison with visual ranking</h2>
+      </div>
+    </div>
+    <div class="two-col">
+      <section class="section-card nested-card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>Accuracy</th>
+                <th>ROC-AUC</th>
+                <th>F1</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in project.model_results %}
+              <tr class="{% if row.name == best_model.name %}highlight{% endif %}">
+                <td>
+                  <div class="model-name">{{ row.name }}</div>
+                  <div class="muted">{{ row.note }}</div>
+                </td>
+                <td>{{ '%.4f'|format(row.accuracy) }}</td>
+                <td>{{ '%.4f'|format(row.roc_auc) }}</td>
+                <td>{{ '%.4f'|format(row.f1) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="section-card nested-card">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Visual graph</span>
+            <h2>Multi-metric model comparison</h2>
+          </div>
+        </div>
+        <div id="modelComparisonChart"
+             class="model-chart-shell"
+             data-labels='{{ model_chart.labels|tojson }}'
+             data-accuracy='{{ model_chart.accuracy|tojson }}'
+             data-roc='{{ model_chart.roc_auc|tojson }}'
+             data-f1='{{ model_chart.f1|tojson }}'
+             data-y-max='{{ model_chart.y_max }}'></div>
+        <div class="chart-legend" aria-label="Metric legend">
+          <div class="legend-item"><span class="legend-swatch legend-accuracy"></span>Accuracy</div>
+          <div class="legend-item"><span class="legend-swatch legend-roc"></span>ROC-AUC</div>
+          <div class="legend-item"><span class="legend-swatch legend-f1"></span>F1</div>
+        </div>
+      </section>
+    </div>
+    <section class="section-card nested-card heatmap-card">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">Heatmap</span>
+          <h2>Expression heatmap from the real dataset</h2>
+        </div>
+      </div>
+      <img class="heatmap-image" src="{{ url_for('static', filename=project.heatmap_image) }}" alt="Heatmap of top variable expression features" />
+      <p class="mini-note">This heatmap is generated from the real GSE5281 expression matrix and highlights the most variable features used for inspection.</p>
+    </section>
+  </div>
+
+  <div class="tab-panel" id="drugs">
+    <div class="section-heading">
+      <div>
+        <span class="section-kicker">Drug insights</span>
+        <h2>Highlighted drugs and quick lookup</h2>
+      </div>
+    </div>
+    <div class="search-bar">
+      <input id="drugSearch" type="search" placeholder="Type a drug name like Alprazolam or Bortezomib" aria-label="Search drug" />
+      <span class="search-hint">Use this panel to inspect the highlighted repurposing drugs from the notebook outputs.</span>
+    </div>
+    <div class="search-layout">
+      <div class="drug-results" id="drugResults">
+        {% for drug in project.search_drugs %}
+        <button class="drug-card" type="button" data-drug="{{ drug.drug|lower }}" data-name="{{ drug.drug }}" data-category="{{ drug.category }}" data-evidence="{{ drug.evidence }}" data-detail="{{ drug.detail }}">
+          <div class="drug-card-top">
+            <strong>{{ drug.drug }}</strong>
+            <span>{{ drug.category }}</span>
+          </div>
+          <p>{{ drug.evidence }}</p>
+        </button>
+        {% endfor %}
+      </div>
+      <div class="drug-detail" id="drugDetail">
+        <span class="section-kicker">Drug detail</span>
+        <h3>Search a drug to view its analysis</h3>
+        <p>Select any drug card on the left. The panel will show its notebook-based interpretation here.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="genes">
+    <div class="section-heading">
+      <div>
+        <span class="section-kicker">Gene explorer</span>
+        <h2>Search genes from the dataset or upload future discoveries</h2>
+      </div>
+    </div>
+    <div class="two-col">
+      <section class="section-card nested-card">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Live search</span>
+            <h2>Search gene cards from your dataset</h2>
+          </div>
+        </div>
+        <p class="muted-note">Use this section to browse the real gene catalog loaded from the DGIdb interaction file.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="/genes">Open full gene explorer</a>
+        </div>
+      </section>
+      <section class="section-card nested-card accent-card">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">New discoveries</span>
+            <h2>Upload genes you discover later</h2>
+          </div>
+        </div>
+        <form method="post" action="/genes">
+          <textarea name="gene_list" placeholder="Type one gene per line or separate them with commas"></textarea>
+          <button class="button button-primary" type="submit">Analyze new genes</button>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="report">
+    <div class="section-heading">
+      <div>
+        <span class="section-kicker">Report</span>
+        <h2>Download or open the full report</h2>
+      </div>
+    </div>
+    <div class="two-col">
+      <section class="section-card nested-card">
+        <p class="lead">Use the buttons below to download the full report or open the dedicated report page.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="/download-report">Download full report</a>
+          <a class="button button-secondary" href="/report">Open report page</a>
+        </div>
+        <div class="link-box">Permanent local link: <a href="http://127.0.0.1:5000/">http://127.0.0.1:5000/</a></div>
+      </section>
+      <section class="section-card nested-card">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Source files</span>
+            <h2>Real files used in the project</h2>
+          </div>
+        </div>
+        <div class="file-list">
+          {% for file in project.source_files %}
+          <code>{{ file }}</code>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+  </div>
+</section>
+{% endblock %}

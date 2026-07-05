@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="hero-card hero-split">
+  <div class="hero-copy">
+    <span class="eyebrow">Gene-based drug explorer</span>
+    <h1>Search the Alzheimer-related gene catalog from your dataset</h1>
+    <p class="lead">This view loads the gene records from your DGIdb interaction file, shows a doctor-style explanation for each gene, and highlights the drugs linked to it so you can inspect them quickly.</p>
+    <div class="hero-actions">
+      <a class="button button-primary" href="/">Back to overview</a>
+      <a class="button button-secondary" href="/report">Open full report</a>
+    </div>
+  </div>
+  <div class="hero-panel">
+    <div class="panel-label">Dataset coverage</div>
+    <div class="panel-model">{{ genes|length }} genes loaded</div>
+    <div class="panel-metrics">
+      <div><strong>{{ project.sample_stats[0].value }}</strong><span>Samples</span></div>
+      <div><strong>{{ project.sample_stats[2].value }}</strong><span>AD cases</span></div>
+      <div><strong>{{ project.sample_stats[3].value }}</strong><span>Features</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="section-card">
+  <div class="section-heading">
+    <div>
+      <span class="section-kicker">Search</span>
+      <h2>Type any gene symbol and explore related drugs</h2>
+    </div>
+  </div>
+  <div class="gene-explorer-layout">
+    <div class="gene-search-card">
+      <div class="gene-search-controls">
+        <input id="geneSearchInput" type="text" placeholder="Search genes like APOE, APP, MAPT, BACE1..." />
+      </div>
+      <div class="gene-results" id="geneResults">
+        {% for gene in genes %}
+        <button class="gene-card" type="button" data-gene="{{ gene.gene }}" data-description="{{ gene.description|e }}" data-interaction-count="{{ gene.interaction_count }}" data-drugs="{{ gene.related_drugs|join(',') }}">
+          <span class="gene-pill">{{ gene.gene }}</span>
+          <h3>{{ gene.gene }}</h3>
+          <p>{{ gene.description }}</p>
+          <small>{{ gene.interaction_count }} interaction records</small>
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="gene-side-panel">
+      <section class="gene-upload-card">
+        <span class="section-kicker">Upload genes</span>
+        <h3>Paste a gene list for instant review</h3>
+        <p class="muted-note">Add one gene per line or separate them with commas or semicolons. The app will look them up immediately in the Alzheimer drug-repurposing dataset.</p>
+        <form method="post" action="/genes">
+          <textarea name="gene_list" placeholder="Example: APOE, APP, MAPT, BACE1">{{ request.form.gene_list or '' }}</textarea>
+          <button class="button button-primary" type="submit">Analyze gene list</button>
+        </form>
+        {% if error_message %}
+        <p class="callout">{{ error_message }}</p>
+        {% endif %}
+      </section>
+
+      <section class="gene-detail-card" id="geneDetail">
+        {% if selected_genes %}
+          {% set selected = selected_genes[0] %}
+          <span class="section-kicker">Selected gene</span>
+          <h3>{{ selected.gene }}</h3>
+          <div class="detail-block">
+            <strong>Clinical-style description</strong>
+            <p>{{ selected.description }}</p>
+          </div>
+          <div class="detail-block">
+            <strong>Linked drugs</strong>
+            <ul>
+              {% for drug in selected.drug_links %}
+              <li>{{ drug.drug_name }}{% if drug.approved %} · approved{% endif %}{% if drug.anti_neoplastic %} · anti-neoplastic{% endif %}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% else %}
+          <span class="section-kicker">Selected gene</span>
+          <h3>Choose a gene</h3>
+          <p class="muted-note">Click any card to read a detailed summary of its related drug evidence from the dataset.</p>
+        {% endif %}
+      </section>
+    </div>
+  </div>
+</section>
+{% endblock %}
