@@ -2,9 +2,11 @@ import gzip
 import os
 import re
 from pathlib import Path
+import tempfile
+
+os.environ['MPLCONFIGDIR'] = tempfile.gettempdir()
 
 import matplotlib
-
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
@@ -533,6 +535,7 @@ def download_report():
 
 
 if __name__ == "__main__":
+    debug_mode = os.environ.get("FLASK_ENV") != "production"
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", "5000"))
-    app.run(debug=True, host=host, port=port)
+    app.run(debug=debug_mode, host=host, port=port)
