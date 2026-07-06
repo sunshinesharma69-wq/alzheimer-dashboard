@@ -275,13 +275,15 @@ def load_gene_catalog():
     global GENE_CATALOG_CACHE
     if GENE_CATALOG_CACHE is not None:
         return GENE_CATALOG_CACHE
-
-        catalog_path = STATIC_DIR / "gene_catalog.json"
-    if catalog_path.exists():
-        with open(catalog_path, "r") as f:
+    
+    # Path ka jhanjhat hi khatam, direct static folder se load karein
+    try:
+        with open("static/gene_catalog.json", "r") as f:
             GENE_CATALOG_CACHE = json.load(f)
             return GENE_CATALOG_CACHE
-    return []
+    except Exception:
+        return []
+
 
 
 
