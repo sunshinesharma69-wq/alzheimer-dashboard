@@ -275,57 +275,13 @@ def load_gene_catalog():
     if GENE_CATALOG_CACHE is not None:
         return GENE_CATALOG_CACHE
 
-    gene_path = DATA_DIR / "interactions-2024.tsv"
-    if not gene_path.exists():
-        GENE_CATALOG_CACHE = []
-        return GENE_CATALOG_CACHE
+        catalog_path = STATIC_DIR / "gene_catalog.json"
+    if catalog_path.exists():
+        with open(catalog_path, "r") as f:
+            GENE_CATALOG_CACHE = json.load(f)
+            return GENE_CATALOG_CACHE
+    return []
 
-    df = pd.read_csv(gene_path, sep="\t", low_memory=False)
-    required_columns = [
-        "gene_name",
-        "drug_name",
-        "approved",
-        "anti_neoplastic",
-        "interaction_type",
-        "interaction_score",
-    ]
-    available_columns = [col for col in required_columns if col in df.columns]
-    if not available_columns:
-        GENE_CATALOG_CACHE = []
-        return GENE_CATALOG_CACHE
-
-    gene_df = df.loc[:, available_columns].copy()
-    gene_df["gene_name"] = gene_df["gene_name"].astype(str).str.strip()
-    gene_df["drug_name"] = gene_df["drug_name"].astype(str).str.strip()
-    gene_df = gene_df[(gene_df["gene_name"] != "") & (gene_df["drug_name"] != "") & (gene_df["gene_name"] != "nan")]
-    gene_df = gene_df.drop_duplicates()
-
-    catalog = []
-    for gene_name, grouped in gene_df.groupby("gene_name", sort=True):
-        drug_rows = grouped[["drug_name", "approved", "anti_neoplastic", "interaction_type", "interaction_score"]].drop_duplicates()
-        drug_rows = drug_rows.sort_values(by=["approved", "interaction_score"], ascending=[False, False])
-        top_drugs = [
-            {
-                "drug_name": row.drug_name,
-                "approved": bool(row.approved),
-                "anti_neoplastic": bool(row.anti_neoplastic),
-                "interaction_type": row.interaction_type,
-            }
-            for _, row in drug_rows.head(6).iterrows()
-        ]
-        catalog.append(
-            {
-                "gene": gene_name,
-                "interaction_count": int(len(grouped)),
-                "description": build_gene_description(gene_name, top_drugs, len(grouped)),
-                "drug_links": top_drugs,
-                "related_drugs": [drug["drug_name"] for drug in top_drugs],
-            }
-        )
-
-    catalog.sort(key=lambda item: item["gene"].upper())
-    GENE_CATALOG_CACHE = catalog
-    return GENE_CATALOG_CACHE
 
 
 def parse_gene_input(raw_text):
