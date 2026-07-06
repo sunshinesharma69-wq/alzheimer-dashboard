@@ -3,15 +3,6 @@ import os
 import re
 from pathlib import Path
 import tempfile
-
-os.environ['MPLCONFIGDIR'] = tempfile.gettempdir()
-
-import matplotlib
-matplotlib.use("Agg")
-
-import matplotlib.pyplot as plt
-import pandas as pd
-import seaborn as sns
 from flask import Flask, Response, jsonify, render_template, request
 
 app = Flask(__name__)
