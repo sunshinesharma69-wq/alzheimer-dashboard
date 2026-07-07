@@ -442,7 +442,6 @@ def build_report_text():
     lines.append(f"- Total samples: {PROJECT['sample_stats'][0]['value']}")
     lines.append(f"- Control samples: {PROJECT['sample_stats'][1]['value']}")
     lines.append(f"- AD samples: {PROJECT['sample_stats'][2]['value']}")
-    lines.append(f"- Expression features: {PROJECT['sample_stats'][3]['value']}")
     lines.append("")
     lines.append("Model comparison")
     for row in PROJECT["model_results"]:
