@@ -25,7 +25,6 @@ PROJECT = {
         {"label": "Total samples", "value": "161"},
         {"label": "Control samples", "value": "74"},
         {"label": "AD samples", "value": "87"},
-        {"label": "Expression features", "value": "33,297"},
     ],
     "model_results": [
         {
